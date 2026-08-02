@@ -436,7 +436,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.jkcoxson.LocalDevVPN;
+				PRODUCT_BUNDLE_IDENTIFIER = com.midodotcom.LocalDevVPN;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "appletvos appletvsimulator iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -474,7 +474,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.jkcoxson.LocalDevVPN;
+				PRODUCT_BUNDLE_IDENTIFIER = com.midodotcom.LocalDevVPN;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "appletvos appletvsimulator iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -499,8 +499,8 @@
 				);
 				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TUNNEL_BUNDLE_IDENTIFIER)";
-				"PRODUCT_BUNDLE_IDENTIFIER[sdk=appletvos*]" = com.jkcoxson.LocalDevVPN.TunnelProv;
-				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.jkcoxson.LocalDevVPN.TunnelProv;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=appletvos*]" = com.midodotcom.LocalDevVPN.TunnelProv;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.midodotcom.LocalDevVPN.TunnelProv;
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "appletvos appletvsimulator iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -525,8 +525,8 @@
 				);
 				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TUNNEL_BUNDLE_IDENTIFIER)";
-				"PRODUCT_BUNDLE_IDENTIFIER[sdk=appletvos*]" = com.jkcoxson.LocalDevVPN.TunnelProv;
-				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.jkcoxson.LocalDevVPN.TunnelProv;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=appletvos*]" = com.midodotcom.LocalDevVPN.TunnelProv;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.midodotcom.LocalDevVPN.TunnelProv;
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "appletvos appletvsimulator iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
