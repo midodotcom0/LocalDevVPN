@@ -115,6 +115,14 @@ class TunnelManager: ObservableObject {
     }
 
     private init() {
+        // Recover from older builds that used the invalid network address
+        // 10.7.0.0 and enable the tunnel automatically for the dedicated
+        // StikDebug peer address.
+        UserDefaults.standard.set("10.7.0.2", forKey: "TunnelDeviceIP")
+        UserDefaults.standard.set("10.7.0.1", forKey: "TunnelFakeIP")
+        UserDefaults.standard.set("255.255.255.0", forKey: "TunnelSubnetMask")
+        UserDefaults.standard.set(true, forKey: "autoConnect")
+
         if isSimulator {
         loadTunnelPreferences()
             VPNLogger.shared.log("Running on Simulator – VPN calls are mocked")
