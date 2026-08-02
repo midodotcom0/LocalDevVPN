@@ -8,7 +8,7 @@
 import NetworkExtension
 
 class PacketTunnelProvider: NEPacketTunnelProvider {
-    var tunnelDeviceIp: String = "10.7.0.0"
+    var tunnelDeviceIp: String = "10.7.0.2"
     var tunnelFakeIp: String = "10.7.0.1"
     var tunnelSubnetMask: String = "255.255.255.0"
     

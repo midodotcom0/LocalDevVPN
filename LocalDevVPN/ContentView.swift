@@ -56,7 +56,7 @@ class TunnelManager: ObservableObject {
     }()
 
     private var tunnelDeviceIp: String {
-        UserDefaults.standard.string(forKey: "TunnelDeviceIP") ?? "10.7.0.0"
+        UserDefaults.standard.string(forKey: "TunnelDeviceIP") ?? "10.7.0.2"
     }
 
     private var tunnelFakeIp: String {
@@ -281,7 +281,7 @@ class TunnelManager: ObservableObject {
             let onDemandRule = NEOnDemandRuleEvaluateConnection()
             onDemandRule.interfaceTypeMatch = .any
             onDemandRule.connectionRules = [NEEvaluateConnectionRule(
-                matchDomains: ["10.7.0.0", "10.7.0.1"],
+                matchDomains: ["10.7.0.1"],
                 andAction: .connectIfNeeded
             )]
 
@@ -786,7 +786,7 @@ extension View {
 
 struct StatusOverviewCard: View {
     @StateObject private var tunnelManager = TunnelManager.shared
-    @AppStorage("TunnelDeviceIP") private var deviceIP = "10.7.0.0"
+    @AppStorage("TunnelDeviceIP") private var deviceIP = "10.7.0.2"
 
     var body: some View {
         DashboardCard {
@@ -972,7 +972,7 @@ struct ConnectionButton: View {
 
 struct ConnectionStatsView: View {
     @StateObject private var tunnelManager = TunnelManager.shared
-    @AppStorage("TunnelDeviceIP") private var deviceIP = "10.7.0.0"
+    @AppStorage("TunnelDeviceIP") private var deviceIP = "10.7.0.2"
     @AppStorage("TunnelFakeIP") private var fakeIP = "10.7.0.1"
     @AppStorage("TunnelSubnetMask") private var subnetMask = "255.255.255.0"
 
@@ -1085,7 +1085,7 @@ struct DashboardCard<Content: View>: View {
 struct SettingsView: View {
     @Environment(\.presentationMode) var presentationMode
     @AppStorage("selectedLanguage") private var selectedLanguage = Locale.current.languageCode ?? "en"
-    @AppStorage("TunnelDeviceIP") private var deviceIP = "10.7.0.0"
+    @AppStorage("TunnelDeviceIP") private var deviceIP = "10.7.0.2"
     @AppStorage("TunnelFakeIP") private var fakeIP = "10.7.0.1"
     @AppStorage("TunnelSubnetMask") private var subnetMask = "255.255.255.0"
     @AppStorage("autoConnect") private var autoConnect = false
@@ -1167,7 +1167,7 @@ struct SettingsView: View {
                     dismissButton: .cancel(Text("understand_button")) {
                         shownTunnelAlert = true
 
-                        deviceIP = "10.7.0.0"
+                        deviceIP = "10.7.0.2"
                         fakeIP = "10.7.0.1"
                         subnetMask = "255.255.255.0"
                     }
