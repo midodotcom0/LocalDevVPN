@@ -28,7 +28,11 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         
         let settings = NEPacketTunnelNetworkSettings(tunnelRemoteAddress: tunnelDeviceIp)
         let ipv4 = NEIPv4Settings(addresses: [tunnelDeviceIp], subnetMasks: [tunnelSubnetMask])
-        ipv4.includedRoutes = [NEIPv4Route(destinationAddress: tunnelDeviceIp, subnetMask: tunnelSubnetMask)]
+        // Route the synthetic peer address through the packet tunnel.  The
+        // previous implementation routed `tunnelDeviceIp` instead, which
+        // left connections to the configured fake/peer address on the
+        // physical hotspot interface and caused a timeout in StikDebug.
+        ipv4.includedRoutes = [NEIPv4Route(destinationAddress: tunnelFakeIp, subnetMask: "255.255.255.255")]
         ipv4.excludedRoutes = [.default()]
         settings.ipv4Settings = ipv4
         
