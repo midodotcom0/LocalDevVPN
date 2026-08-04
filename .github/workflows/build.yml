@@ -1,11 +1,11 @@
-name: Build IPA with Fake Signing
+name: Build Exact LocalDevVPN IPA
 
 on:
-    push:
-        branches: [main]
     pull_request:
-        branches: [main]
-    workflow_dispatch:
+        branches: [buildbase-localdevvpn-b79d4bf]
+
+permissions:
+    contents: read
 
 jobs:
     build:
@@ -18,8 +18,10 @@ jobs:
             - name: Install ldid
               run: brew install ldid
 
-            - name: Select Latest Xcode
-              run: sudo xcode-select -switch /Applications/Xcode.app
+            - name: Select Xcode 26.6
+              uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: '26.6'
 
             - name: Build Xcode Archive
               run: |
@@ -45,24 +47,18 @@ jobs:
                     echo "Error: App Extension (.appex) not found in PlugIns directory."
                     exit 1
                   fi
-                  echo "Found App Extension at: $APPEX_PATH"
-                  # Use the specific entitlements for the extension
                   ldid -S"${GITHUB_WORKSPACE}/TunnelProv/TunnelProv.entitlements" "$APPEX_PATH/$(basename "$APPEX_PATH" .appex)"
-                  echo "Signed App Extension."
 
             - name: Sign Main App Bundle
               run: |
-                  APP_BINARY_PATH="Payload/LocalDevVPN.app/LocalDevVPN"
-                  # Use the specific entitlements for the main app
-                  ldid -S"${GITHUB_WORKSPACE}/LocalDevVPN/LocalDevVPN.entitlements" "$APP_BINARY_PATH"
-                  echo "Signed Main App Bundle."
+                  ldid -S"${GITHUB_WORKSPACE}/LocalDevVPN/LocalDevVPN.entitlements" Payload/LocalDevVPN.app/LocalDevVPN
 
             - name: Create IPA
-              run: |
-                  zip -r ./LocalDevVPN-fakesigned.ipa Payload
+              run: zip -r LocalDevVPN-working-lan-session.ipa Payload
 
             - name: Upload IPA Artifact
               uses: actions/upload-artifact@v4
               with:
-                  name: LocalDevVPN-IPA.ipa
-                  path: LocalDevVPN-fakesigned.ipa
+                  name: LocalDevVPN-working-lan-session
+                  path: LocalDevVPN-working-lan-session.ipa
+                  retention-days: 30
