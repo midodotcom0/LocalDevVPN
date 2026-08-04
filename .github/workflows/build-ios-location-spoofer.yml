@@ -62,8 +62,9 @@ jobs:
       - name: Build unsigned device app
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           cd source
+          set +e
           xcodebuild clean build \
             -project location-spoofer.xcodeproj \
             -scheme location-spoofer \
@@ -77,7 +78,20 @@ jobs:
             EXPANDED_CODE_SIGN_IDENTITY='' \
             DEVELOPMENT_TEAM='' \
             PROVISIONING_PROFILE='' \
-            PROVISIONING_PROFILE_SPECIFIER=''
+            PROVISIONING_PROFILE_SPECIFIER='' \
+            2>&1 | tee "$RUNNER_TEMP/xcodebuild.log"
+          BUILD_STATUS=${PIPESTATUS[0]}
+          set -e
+          exit "$BUILD_STATUS"
+
+      - name: Upload Xcode build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: LocationSpoofer-Xcode-build-log
+          path: ${{ runner.temp }}/xcodebuild.log
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Package IPA
         shell: bash
