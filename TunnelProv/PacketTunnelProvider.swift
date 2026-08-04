@@ -26,16 +26,9 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         deviceIpValue = ipToUInt32(tunnelDeviceIp)
         fakeIpValue = ipToUInt32(tunnelFakeIp)
         
-        // The remote address must be the synthetic peer, not the local
-        // tunnel address. Using the local address here makes iOS reject the
-        // NetworkExtension configuration with a generic VPN error.
-        let settings = NEPacketTunnelNetworkSettings(tunnelRemoteAddress: tunnelFakeIp)
+        let settings = NEPacketTunnelNetworkSettings(tunnelRemoteAddress: tunnelDeviceIp)
         let ipv4 = NEIPv4Settings(addresses: [tunnelDeviceIp], subnetMasks: [tunnelSubnetMask])
-        // Route the synthetic peer address through the packet tunnel.  The
-        // previous implementation routed `tunnelDeviceIp` instead, which
-        // left connections to the configured fake/peer address on the
-        // physical hotspot interface and caused a timeout in StikDebug.
-        ipv4.includedRoutes = [NEIPv4Route(destinationAddress: tunnelFakeIp, subnetMask: "255.255.255.255")]
+        ipv4.includedRoutes = [NEIPv4Route(destinationAddress: tunnelDeviceIp, subnetMask: tunnelSubnetMask)]
         ipv4.excludedRoutes = [.default()]
         settings.ipv4Settings = ipv4
         
