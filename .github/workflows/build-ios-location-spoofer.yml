@@ -25,6 +25,44 @@ jobs:
           ref: bfb44fa3b00e2cc8820536fb58e375d7269ef90a
           path: source
 
+      - name: Patch upstream Swift syntax errors
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              Path("source/App/MapHomeView.swift"): [
+                  (
+                      'DiagLog.add("[cold-start] finish failed:\\(errMsg ?? "VPN start failed")',
+                      'DiagLog.add("[cold-start] finish failed:\\(errMsg ?? "VPN start failed")")',
+                  ),
+                  (
+                      'DiagLog.add("[hot-restart] finish failed:\\(errMsg ?? "VPN reconnect failed")',
+                      'DiagLog.add("[hot-restart] finish failed:\\(errMsg ?? "VPN reconnect failed")")',
+                  ),
+              ],
+              Path("source/App/SettingsView.swift"): [
+                  (
+                      'Text("No logs yet. Run "Set as Location" once and come back.")',
+                      'Text("No logs yet. Run \\"Set as Location\\" once and come back.")',
+                  ),
+              ],
+          }
+
+          for path, edits in replacements.items():
+              text = path.read_text(encoding="utf-8")
+              for old, new in edits:
+                  count = text.count(old)
+                  if count != 1:
+                      raise SystemExit(f"Expected exactly one match in {path}: {old!r}; found {count}")
+                  text = text.replace(old, new)
+              path.write_text(text, encoding="utf-8")
+          PY
+
+          grep -n 'finish failed\|No logs yet' source/App/MapHomeView.swift source/App/SettingsView.swift
+
       - name: Select newest installed Xcode
         shell: bash
         run: |
