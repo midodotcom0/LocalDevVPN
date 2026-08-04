@@ -7,6 +7,9 @@ on:
       - main
     paths:
       - .github/workflows/build-locus-two-buttons.yml
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -169,7 +172,7 @@ jobs:
           retention-days: 30
 
       - name: Publish build result in repository
-        if: always()
+        if: always() && github.event_name == 'push'
         env:
           BUILD_RESULT: ${{ job.status }}
         shell: bash
