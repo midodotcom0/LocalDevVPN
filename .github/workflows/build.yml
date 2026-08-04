@@ -46,23 +46,166 @@ jobs:
                     exit 1
                   fi
                   echo "Found App Extension at: $APPEX_PATH"
-                  # Use the specific entitlements for the extension
                   ldid -S"${GITHUB_WORKSPACE}/TunnelProv/TunnelProv.entitlements" "$APPEX_PATH/$(basename "$APPEX_PATH" .appex)"
                   echo "Signed App Extension."
 
             - name: Sign Main App Bundle
               run: |
                   APP_BINARY_PATH="Payload/LocalDevVPN.app/LocalDevVPN"
-                  # Use the specific entitlements for the main app
                   ldid -S"${GITHUB_WORKSPACE}/LocalDevVPN/LocalDevVPN.entitlements" "$APP_BINARY_PATH"
                   echo "Signed Main App Bundle."
 
             - name: Create IPA
-              run: |
-                  zip -r ./LocalDevVPN-fakesigned.ipa Payload
+              run: zip -r ./LocalDevVPN-fakesigned.ipa Payload
 
             - name: Upload IPA Artifact
               uses: actions/upload-artifact@v4
               with:
                   name: LocalDevVPN-IPA.ipa
                   path: LocalDevVPN-fakesigned.ipa
+
+    build-locus:
+        name: Build Locus Two-Button IPA
+        runs-on: macos-15
+        timeout-minutes: 45
+
+        steps:
+            - name: Checkout Locus
+              uses: actions/checkout@v4
+              with:
+                  repository: ChrisMack32/Locus
+                  ref: 83c8fb324983728e8f44759cfd834dc637ee38b5
+
+            - name: Keep Teleport and Stop as separate buttons
+              run: |
+                  python3 - <<'PY'
+                  from pathlib import Path
+
+                  path = Path("Locus/Features/Map/RootView.swift")
+                  text = path.read_text()
+                  old = '''                if session.isSpoofing {
+                      Button {
+                          session.stop(pairing: pairing)
+                      } label: {
+                          Text("Stop")
+                              .font(.subheadline.weight(.bold))
+                              .foregroundStyle(.white)
+                              .frame(minWidth: 72)
+                              .padding(.vertical, 12)
+                              .padding(.horizontal, 8)
+                              .background(Capsule().fill(LocusTheme.danger))
+                              .contentShape(Capsule())
+                      }
+                      .buttonStyle(.plain)
+                  } else {
+                      Button {
+                          guard let pin = session.pin else {
+                              session.lastError = "Tap the map to drop a pin first."
+                              return
+                          }
+                          session.teleport(to: pin, pairing: pairing)
+                      } label: {
+                          Text("Teleport")
+                              .font(.subheadline.weight(.bold))
+                              .foregroundStyle(.black)
+                              .frame(minWidth: 96)
+                              .padding(.vertical, 12)
+                              .padding(.horizontal, 10)
+                              .background(Capsule().fill(LocusTheme.accent))
+                              .contentShape(Capsule())
+                      }
+                      .buttonStyle(.plain)
+                      .disabled(session.isBusy)
+                  }
+                  '''
+                  new = '''                Button {
+                      guard let pin = session.pin else {
+                          session.lastError = "Tap the map to drop a pin first."
+                          return
+                      }
+                      session.teleport(to: pin, pairing: pairing)
+                  } label: {
+                      Text("Teleport")
+                          .font(.subheadline.weight(.bold))
+                          .foregroundStyle(.black)
+                          .frame(maxWidth: .infinity)
+                          .padding(.vertical, 12)
+                          .padding(.horizontal, 8)
+                          .background(Capsule().fill(LocusTheme.accent))
+                          .contentShape(Capsule())
+                  }
+                  .buttonStyle(.plain)
+                  .disabled(session.isBusy || session.pin == nil)
+
+                  Button {
+                      session.stop(pairing: pairing)
+                  } label: {
+                      Text("Stop")
+                          .font(.subheadline.weight(.bold))
+                          .foregroundStyle(.white)
+                          .frame(minWidth: 64)
+                          .padding(.vertical, 12)
+                          .padding(.horizontal, 8)
+                          .background(
+                              Capsule().fill(
+                                  session.isSpoofing
+                                      ? LocusTheme.danger
+                                      : Color.primary.opacity(0.16)
+                              )
+                          )
+                          .contentShape(Capsule())
+                  }
+                  .buttonStyle(.plain)
+                  .disabled(session.isBusy || !session.isSpoofing)
+                  '''
+                  if old not in text:
+                      raise SystemExit("Expected Locus controls block was not found")
+                  path.write_text(text.replace(old, new, 1))
+                  PY
+
+            - name: Select Latest Xcode
+              run: |
+                  XCODE_APP="$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+                  sudo xcode-select -switch "$XCODE_APP/Contents/Developer"
+                  xcodebuild -version
+
+            - name: Build unsigned Locus app
+              run: |
+                  set -o pipefail
+                  xcodebuild \
+                    -project Locus.xcodeproj \
+                    -scheme Locus \
+                    -configuration Release \
+                    -sdk iphoneos \
+                    -destination 'generic/platform=iOS' \
+                    -derivedDataPath "$RUNNER_TEMP/LocusDerivedData" \
+                    CODE_SIGN_IDENTITY="" \
+                    CODE_SIGNING_REQUIRED=NO \
+                    CODE_SIGNING_ALLOWED=NO \
+                    build | tee "$RUNNER_TEMP/locus-build.log"
+
+            - name: Package Locus IPA
+              run: |
+                  set -euo pipefail
+                  APP_PATH="$(find "$RUNNER_TEMP/LocusDerivedData/Build/Products/Release-iphoneos" -maxdepth 1 -name '*.app' -print -quit)"
+                  test -n "$APP_PATH"
+                  mkdir -p Payload
+                  cp -R "$APP_PATH" Payload/
+                  zip -qry Locus-Two-Buttons-unsigned.ipa Payload
+                  test -s Locus-Two-Buttons-unsigned.ipa
+
+            - name: Upload Locus IPA Artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: Locus-Two-Buttons-unsigned-IPA
+                  path: Locus-Two-Buttons-unsigned.ipa
+                  if-no-files-found: error
+                  retention-days: 30
+
+            - name: Upload Locus build log on failure
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: Locus-Two-Buttons-build-log
+                  path: ${{ runner.temp }}/locus-build.log
+                  if-no-files-found: ignore
