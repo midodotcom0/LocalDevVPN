@@ -153,27 +153,14 @@ jobs:
           set -euo pipefail
           APP_PATH="$(find "$RUNNER_TEMP/LocusDerivedData/Build/Products/Release-iphoneos" -maxdepth 1 -name '*.app' -print -quit)"
           test -n "$APP_PATH"
+          rm -rf Payload
           mkdir -p Payload
           cp -R "$APP_PATH" Payload/
           /usr/bin/zip -qry Locus-Two-Buttons-unsigned.ipa Payload
           test -s Locus-Two-Buttons-unsigned.ipa
 
-      - name: Publish IPA in repository
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p artifacts
-          cp Locus-Two-Buttons-unsigned.ipa artifacts/Locus-Two-Buttons-unsigned.ipa
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add artifacts/Locus-Two-Buttons-unsigned.ipa
-          if git diff --cached --quiet; then
-            exit 0
-          fi
-          git commit -m "Publish Locus two-button unsigned IPA"
-          git push origin HEAD:main
-
       - name: Upload IPA
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: Locus-Two-Buttons-unsigned-IPA
@@ -181,10 +168,26 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Upload build log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: Locus-Two-Buttons-build-log
-          path: ${{ runner.temp }}/locus-build.log
-          if-no-files-found: ignore
+      - name: Publish build result in repository
+        if: always()
+        env:
+          BUILD_RESULT: ${{ job.status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          printf '%s\n' "$BUILD_RESULT" > artifacts/locus-two-buttons-status.txt
+          if [ -f Locus-Two-Buttons-unsigned.ipa ]; then
+            cp Locus-Two-Buttons-unsigned.ipa artifacts/Locus-Two-Buttons-unsigned.ipa
+          fi
+          if [ -f "$RUNNER_TEMP/locus-build.log" ]; then
+            tail -n 300 "$RUNNER_TEMP/locus-build.log" > artifacts/locus-two-buttons-build-tail.txt
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Publish Locus two-button build result"
+          git push origin HEAD:main
