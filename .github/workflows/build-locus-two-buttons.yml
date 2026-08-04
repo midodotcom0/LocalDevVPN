@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - agent/locus-two-buttons
+      - main
     paths:
       - .github/workflows/build-locus-two-buttons.yml
 
