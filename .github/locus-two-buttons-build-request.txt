@@ -1,0 +1,2 @@
+Build request for Locus with separate Teleport and Stop buttons.
+Ready build trigger: 2026-08-04.
