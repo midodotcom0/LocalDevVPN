@@ -8,6 +8,9 @@ on:
     paths:
       - .github/workflows/build-locus-two-buttons.yml
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-15
@@ -154,6 +157,21 @@ jobs:
           cp -R "$APP_PATH" Payload/
           /usr/bin/zip -qry Locus-Two-Buttons-unsigned.ipa Payload
           test -s Locus-Two-Buttons-unsigned.ipa
+
+      - name: Publish IPA in repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          cp Locus-Two-Buttons-unsigned.ipa artifacts/Locus-Two-Buttons-unsigned.ipa
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/Locus-Two-Buttons-unsigned.ipa
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Publish Locus two-button unsigned IPA"
+          git push origin HEAD:main
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
