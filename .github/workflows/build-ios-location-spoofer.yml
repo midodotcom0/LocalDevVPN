@@ -1,0 +1,167 @@
+name: Build iOS Location Spoofer IPA
+
+on:
+  push:
+    branches:
+      - agent/build-ios-location-spoofer-ipa
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-unsigned-ipa:
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out iOS Location Spoofer
+        uses: actions/checkout@v4
+        with:
+          repository: acheong08/ios-location-spoofer
+          ref: bfb44fa3b00e2cc8820536fb58e375d7269ef90a
+          path: source
+
+      - name: Patch upstream Swift syntax errors
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              Path("source/App/MapHomeView.swift"): [
+                  (
+                      'DiagLog.add("[cold-start] finish failed:\\(errMsg ?? "VPN start failed")',
+                      'DiagLog.add("[cold-start] finish failed:\\(errMsg ?? "VPN start failed")")',
+                  ),
+                  (
+                      'DiagLog.add("[hot-restart] finish failed:\\(errMsg ?? "VPN reconnect failed")',
+                      'DiagLog.add("[hot-restart] finish failed:\\(errMsg ?? "VPN reconnect failed")")',
+                  ),
+              ],
+              Path("source/App/SettingsView.swift"): [
+                  (
+                      'Text("No logs yet. Run "Set as Location" once and come back.")',
+                      'Text("No logs yet. Run \\"Set as Location\\" once and come back.")',
+                  ),
+              ],
+          }
+
+          for path, edits in replacements.items():
+              text = path.read_text(encoding="utf-8")
+              for old, new in edits:
+                  count = text.count(old)
+                  if count != 1:
+                      raise SystemExit(f"Expected exactly one match in {path}: {old!r}; found {count}")
+                  text = text.replace(old, new)
+              path.write_text(text, encoding="utf-8")
+          PY
+
+          grep -n 'finish failed\|No logs yet' source/App/MapHomeView.swift source/App/SettingsView.swift
+
+      - name: Select newest installed Xcode
+        shell: bash
+        run: |
+          set -euo pipefail
+          LATEST_XCODE="$(find /Applications -maxdepth 1 -type d -name 'Xcode*.app' | sort -V | tail -1)"
+          test -n "$LATEST_XCODE"
+          sudo xcode-select -s "$LATEST_XCODE"
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache-dependency-path: source/GoSpoofer/go.sum
+
+      - name: Build Go static library
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd source/GoSpoofer
+          chmod +x make.sh
+          ./make.sh
+          test -f build/libgolocationspoofer.a
+          test -f golocationspoofer.h
+
+      - name: Generate Xcode project
+        shell: bash
+        run: |
+          set -euo pipefail
+          brew install xcodegen
+          cd source
+          xcodegen generate
+
+      - name: Build unsigned device app
+        shell: bash
+        run: |
+          set -uo pipefail
+          cd source
+          set +e
+          xcodebuild clean build \
+            -project location-spoofer.xcodeproj \
+            -scheme location-spoofer \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY='' \
+            EXPANDED_CODE_SIGN_IDENTITY='' \
+            DEVELOPMENT_TEAM='' \
+            PROVISIONING_PROFILE='' \
+            PROVISIONING_PROFILE_SPECIFIER='' \
+            2>&1 | tee "$RUNNER_TEMP/xcodebuild.log"
+          BUILD_STATUS=${PIPESTATUS[0]}
+          set -e
+          exit "$BUILD_STATUS"
+
+      - name: Upload Xcode build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: LocationSpoofer-Xcode-build-log
+          path: ${{ runner.temp }}/xcodebuild.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Package IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_PATH="$(find "$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos" -maxdepth 1 -type d -name '*.app' | head -1)"
+          test -n "$APP_PATH"
+          test -d "$APP_PATH"
+          test -d "$APP_PATH/PlugIns"
+          find "$APP_PATH" -maxdepth 4 -print
+
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$APP_PATH" "$RUNNER_TEMP/ipa/Payload/"
+          cd "$RUNNER_TEMP/ipa"
+          /usr/bin/zip -qry "$RUNNER_TEMP/LocationSpoofer-unsigned.ipa" Payload
+
+          cat > "$RUNNER_TEMP/IMPORTANT.txt" <<'EOF'
+          This IPA is unsigned and must be signed before installation.
+          The app contains a Packet Tunnel Network Extension and an App Group.
+          A provisioning profile must authorize these entitlements for both the app and its tunnel extension.
+          EOF
+
+          shasum -a 256 "$RUNNER_TEMP/LocationSpoofer-unsigned.ipa" | tee "$RUNNER_TEMP/SHA256.txt"
+          ls -lh "$RUNNER_TEMP/LocationSpoofer-unsigned.ipa"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LocationSpoofer-unsigned-IPA
+          path: |
+            ${{ runner.temp }}/LocationSpoofer-unsigned.ipa
+            ${{ runner.temp }}/IMPORTANT.txt
+            ${{ runner.temp }}/SHA256.txt
+          if-no-files-found: error
+          retention-days: 30
